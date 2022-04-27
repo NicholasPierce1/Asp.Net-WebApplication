@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 using WebApplication_Playground.Authentication.Services;
 using WebApplication_Playground.DepedencyInjection;
 using WebApplication_Playground.Models.Configuration;
+using WebApplication_Playground.Repository.Adapter;
+using WebApplication_Playground.Repository.Entities;
+using WebApplication_Playground.Repository.Repos;
+using WebApplication_Playground.Repository.Shared;
 
 namespace WebApplication_Playground
 {
@@ -27,7 +31,8 @@ namespace WebApplication_Playground
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {
+        { 
+            
             services.AddControllersWithViews();
             //services.AddMvc();
             services.AddControllers();
@@ -49,7 +54,17 @@ namespace WebApplication_Playground
             CustomConfiguration customCofig = this.Configuration.GetSection("CustomConfig").Get<CustomConfiguration>();
 
             Console.WriteLine($"CustomConfig: appName-{customCofig.appName} | locale- {customCofig.locale}");
-            services.Configure<CustomConfiguration>(this.Configuration.GetSection("CustomConfig"));
+            services.Configure<CustomConfiguration>(
+                this.Configuration.GetSection("CustomConfig")
+                );
+
+            // optional: register action to mutate config object
+            services.Configure<CustomConfiguration>(
+                // optional action to mutate instance
+                (CustomConfiguration customConfiguration) => {
+                    customConfiguration.appName = customConfiguration.appName.ToUpper();
+                    }
+                );
 
             // dependency injections
 
@@ -76,6 +91,60 @@ namespace WebApplication_Playground
             // configure DI for application services
             services.AddScoped<IUserService, UserService>();
 
+
+            // DATABASE
+            Dictionary<string, string> connectionBindings =
+                this.Configuration.GetSection("ConnectionStringMappings").Get<Dictionary<string, string>>();
+
+            foreach (string keyValue in connectionBindings.Keys.Select<string, string>(key => $"{key}-{connectionBindings[key]}"))
+                Console.WriteLine(
+                    $"{nameof(Startup)} --> key-value: ({keyValue}) " +
+                    $"with its connection string ({this.Configuration.GetConnectionString(keyValue.Split("-")[1])})"
+                );
+
+            // add root service for acquiring connection strings for various connection types (ms sql, oracle, mongo)
+            services.Add(
+                new ServiceDescriptor(
+                    typeof(ConnectionHelper),
+                    new ConnectionHelper(
+                        connectionBindings,
+                        this.Configuration.GetConnectionString)
+                    )
+                );
+
+            //services.Add(new ServiceDescriptor(typeof(SqlServerConnection), typeof(SqlServerConnection)));
+            services.Add(
+                new ServiceDescriptor(
+                    typeof(SqlServerConnection),
+                    (IServiceProvider serviceProvider) => new SqlServerConnection(serviceProvider.GetRequiredService<ConnectionHelper>()),
+                    ServiceLifetime.Singleton
+                    )
+                );
+
+            services.Add(new ServiceDescriptor(typeof(SqlEntityMapper), new SqlEntityMapper()));
+
+            services.Add(
+                new ServiceDescriptor(
+                    typeof(StudentRepository),
+                    (IServiceProvider serviceProvider) =>
+                        new StudentRepository(
+                            serviceProvider.GetRequiredService<SqlServerConnection>(),
+                            serviceProvider.GetRequiredService<SqlEntityMapper>()
+                        ),
+                    ServiceLifetime.Singleton
+                    )
+                );
+
+            services.Add(
+                new ServiceDescriptor(
+                    typeof(Adapter),
+                    (IServiceProvider serviceProvider) => 
+                        new Adapter(
+                            serviceProvider.GetRequiredService<StudentRepository>()
+                        ),
+                    ServiceLifetime.Singleton
+                    )
+                );
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

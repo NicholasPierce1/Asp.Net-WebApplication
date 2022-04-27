@@ -37,7 +37,14 @@ namespace WebApplication_Playground.Controllers
 
         // NOTE: [FromServices] is OPTIONAL
         public ValuesRestController(
+            // since CustomConfiguration was added via Configure on services
+            // then it must be injected via IOptions
+            // pro of this way is that, when configuring, you can change the value there
+            // you can also use IOptionsSnapshot<CustomConfiguration> here if you want to be able to edit it
+            // this is read only right now
             IOptions<CustomConfiguration> customConfig,
+            // this was added via a singleton (singleton options do not change this)
+            // so you can inject directly
             [FromServices] CustomInjectionInterface customInjection,
             IWrappedCustomInjection wrappedCustomInjection
             )
@@ -137,7 +144,7 @@ namespace WebApplication_Playground.Controllers
             Console.WriteLine($"body: ({body})");
 
             results["body"] = JObject.Parse(body).ToString(Formatting.Indented);
-
+            
             // cookies
 
             // read & store
@@ -163,12 +170,6 @@ namespace WebApplication_Playground.Controllers
 
             return base.Ok(results);
 
-        }
-
-        // POST api/<ValuesRestController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
         }
 
         [HttpPost]
@@ -236,6 +237,104 @@ namespace WebApplication_Playground.Controllers
             return base.Ok(person);
         }
 
+        [HttpPost]
+        [Route("validateChild")]
+        [Consumes("application/x-www-form-urlencoded")]
+        [Produces("application/json")]
+        public IActionResult ChildFormValidation([FromForm] Child child)
+        {
+            return base.Ok(child);
+        }
+
+        // manual validation
+        // NOTE: BEST WAY -> create your own dictionary containing the subset of info you wish to give to the user
+        //  1) JObject serialization to dictionary does not work
+        //  2) JObject formatted to string while valid in practice is hard to look at and debug
+        [HttpPost]
+        [Route("validateChildManual")]
+        [Consumes("application/json")] // default even if body is just plain string
+        [Produces("application/json")]
+        public IActionResult ManualChildValidation(
+            [FromBody] String name = null,
+            [FromQuery(Name = "child")] params string[] childrenNames)
+        {
+
+            Console.WriteLine($"{nameof(this.ManualChildValidation)}: name ({childrenNames.ToList()[childrenNames.Count() - 1]})");
+
+            ChildKeeper childKeeper = new ChildKeeper()
+            {
+                name = name,
+                children =
+                (from string childName in childrenNames
+                 select
+                 new Child() { name = childName }
+                 ).ToList<Child>()
+            };
+
+            // ModelState.ClearValidationState(nameof(Child)); // use if removing a validation of a converted model
+            ModelState.Clear();
+            if (!TryValidateModel(childKeeper, nameof(ChildKeeper)))
+            {
+                //IEnumerable<ModelError> errors = base.ModelState.Values.SelectMany<ModelStateEntry,ModelError>(v => v.Errors);
+
+                IList<(string name, IEnumerable<string> message)> errorList = new List<(string, IEnumerable<string>)>();
+
+                foreach(KeyValuePair<String,ModelStateEntry> errors in base.ModelState)
+                {
+                    //Console.WriteLine($"{errors.Key} : {errors.Value.Errors[0].ErrorMessage}");
+                    errorList.Add(
+                        (
+                            errors.Key,
+                            from ModelError error in errors.Value.Errors
+                            select
+                            error.ErrorMessage
+                        )
+                    );
+                }
+
+                foreach((string name, IEnumerable<string> message) error in errorList)
+                    Console.WriteLine($"{error.name} : {error.message.ToList()[0]}");
+
+
+                JObject jObject = new JObject(
+                            new JProperty(
+                                "reason",
+                                new JArray(
+                                    from (string name, IEnumerable<string> messages) errors in errorList
+                                    select
+                                    new JObject(
+                                        new JProperty(
+                                            errors.name,
+                                            new JArray(errors.messages.ToArray())
+                                        )
+                                    )
+                                )
+                        )
+                    );
+
+                Console.WriteLine(jObject.ToString(Formatting.Indented)); // converting to dictionary doesn't work
+
+                Dictionary<string, object> results = new Dictionary<string, object>();
+
+                results["reason"] =
+                    from JObject jO in ((JArray)jObject["reason"])
+                    select
+                        new Dictionary<string, object>()
+                        {
+                            {
+                                jO.Properties().ToList()[0].Name,
+                                from JValue message in ((JArray)jO.Properties().ToList()[0].Value)
+                                select (string)message.Value
+                            }
+                        };
+
+
+                return base.BadRequest(results);
+            }
+
+            return base.Ok(childKeeper);
+        }
+
         [HttpGet]
         [Route("getUser")]
         [Produces("application/json")]
@@ -270,6 +369,7 @@ namespace WebApplication_Playground.Controllers
         [Produces("application/json")]
         public IActionResult GetRuntimeConstants()
         {
+            // should reflect mutate options now
             return base.Ok(this.customConfig.Value);
         }
 
@@ -301,6 +401,35 @@ namespace WebApplication_Playground.Controllers
             // for consumers (non-controllers) just register them as injections as well to be 
             // applicable to receiving DIs
             return base.Ok(this.wrappedCustomInjection.wrappedCultureInfo);
+        }
+
+        [HttpPost]
+        [Route("getAndWriteCustomFile")]
+        [Produces("application/json")]
+        public async Task<IActionResult> GetAndWriteCustomFile([FromForm(Name = "fileUpload")] IFormFile formFile)
+        {
+            /*
+             * for multiple files just have input param be IEnumerable<IFormFile>
+             * multiple files, of the same name (fileUpload key is variadic, just like any other variadic var -> form, query)
+             */
+
+            // create temp file name (fileName+guid)
+            // fileNames should be validated, assume correct here
+            using (FileStream fileStream = new FileStream(
+                    //Path.Combine("C:\\Test\\Files", $"fileTwo{Guid.NewGuid()}.txt"),
+                    Path.Combine("C:\\Test\\Files", $"fileTwo_ASP.txt"),
+                    FileMode.Create)
+                )
+            {
+
+                await formFile.CopyToAsync(fileStream);
+
+                Console.WriteLine($"fileName: {formFile.FileName} -- length {formFile.Length}-- headers: {formFile.Headers}");
+
+                // return base.Ok(Path.GetFileName(fileStream.Name));
+                // GOOGLE: ('content type for text file') to find MIME type for a specific file type
+                return base.PhysicalFile(fileStream.Name, "text/plain");
+            }
         }
 
         /*
