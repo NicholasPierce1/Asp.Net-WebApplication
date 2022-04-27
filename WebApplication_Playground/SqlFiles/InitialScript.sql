@@ -109,3 +109,12 @@ WHERE
  -- unique constraint on name already created an index so it's un-needed for two.
  -- drop index
  drop index if exists nameIndex on CustomDatabase.Custom.student;
+
+ -- queries for database interactivity tests below
+ select * 
+ from Custom.student
+ where gender <> 'male';
+
+ select *, len(name) as length 
+ from custom.student
+ where len(name) > 5 and gender = 'male';

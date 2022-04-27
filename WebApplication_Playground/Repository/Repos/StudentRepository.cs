@@ -79,5 +79,88 @@ namespace WebApplication_Playground.Repository.Repos
 
         }
 
+        internal IEnumerable<Student> getStudentsByGender(Student.Gender gender)
+        {
+            const string command =
+                @"select * 
+                 from Custom.student
+                 where gender <> @gender";
+
+            using (SqlConnection sqlConnection = this.getSqlConnection())
+            {
+
+                sqlConnection.Open();
+
+                using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                {
+
+                    sqlCommand.CommandText = command;
+                    sqlCommand.CommandType = CommandType.Text; // default
+                    SqlParameter sqlParamter = sqlCommand.Parameters.AddWithValue(
+                        "@gender",
+                        Enum.GetName(
+                            typeof(Student.Gender),
+                            gender
+                        )!
+                    );
+                    
+                    // can also set data type, direction, and size
+                    // not needed
+                    sqlParamter.Direction = ParameterDirection.Input;
+                    sqlParamter.DbType = DbType.String;
+
+                    using(SqlDataReader sqlDataReader = sqlCommand.ExecuteReader())
+                    {
+                        while(sqlDataReader.Read())
+                            yield return this._sqlEntityMapper.createSqlEntity<Student>(sqlDataReader);
+                    }
+
+                }
+
+                sqlConnection.Close();
+
+            }
+        }
+
+        internal IEnumerable<Student> getStudentsByGenderAndNameLength(Student.Gender gender, int length)
+        {
+            const string command =
+                @" select *, len(name) as length 
+                     from custom.student
+                     where len(name) > @length and gender = @gender";
+
+            using (SqlConnection sqlConnection = this.getSqlConnection())
+            {
+
+                sqlConnection.Open();
+
+                using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                {
+
+                    sqlCommand.CommandText = command;
+                    sqlCommand.CommandType = CommandType.Text; // default
+                    sqlCommand.Parameters.AddRange(
+                        new SqlParameter[] {
+                            new SqlParameter("@length", SqlDbType.Int) {Value = length, Direction = ParameterDirection.Input },
+                            new SqlParameter("@gender", SqlDbType.NVarChar) {
+                                Value = Enum.GetName(typeof(Student.Gender), gender)!,
+                                Direction = ParameterDirection.Input
+                            }
+                        }
+                    );
+
+                    using (SqlDataReader sqlDataReader = sqlCommand.ExecuteReader())
+                    {
+                        while (sqlDataReader.Read())
+                            yield return this._sqlEntityMapper.createSqlEntity<Student>(sqlDataReader);
+                    }
+
+                }
+
+                sqlConnection.Close();
+
+            }
+        }
+
     }
 }

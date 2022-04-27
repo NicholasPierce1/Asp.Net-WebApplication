@@ -23,5 +23,15 @@ namespace WebApplication_Playground.Repository.Adapter
             return this._studentRepository.getAllStudents();
         }
 
+        public IEnumerable<Student> getStudentsByGender(Student.Gender gender)
+        {
+            return this._studentRepository.getStudentsByGender(gender);
+        }
+
+        public IEnumerable<Student> getStudentsByGenderAndNameLength(Student.Gender gender, int length)
+        {
+            return this._studentRepository.getStudentsByGenderAndNameLength(gender, length);
+        }
+
     }
 }
