@@ -78,5 +78,31 @@ namespace WebApplication_Playground.Controllers
                 );
         }
 
+        [HttpPut]
+        [Route("updateStudentWithLowTestScore")]
+        [Produces("text/plain")]
+        public IActionResult updateStudentWithLowTestScore(
+            [FromQuery(Name = "threshold")] int threshold,
+            [FromQuery(Name = "increase")] string increase,
+            [FromQuery(Name = "rollback")] string rollback
+            )
+        {
+            Console.WriteLine("update called");
+            int updated = this._adapter.updateStudentWithLowTestScore(
+                    threshold,
+                    Convert.ToBoolean(increase),
+                    Convert.ToBoolean(rollback)
+                );
+            return base.Ok($"{updated}");
+        }
+
+        [HttpPost]
+        [Route("simulateBatchSave")]
+        [Produces("text/plain")]
+        public IActionResult simulateBatchSave([FromQuery(Name = "failAt")] string failAt)
+        {
+            return base.Ok(this._adapter.simulateBatchSave(failAt));
+        }
+
     }
 }

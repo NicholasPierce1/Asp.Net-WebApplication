@@ -118,3 +118,41 @@ WHERE
  select *, len(name) as length 
  from custom.student
  where len(name) > 5 and gender = 'male';
+
+ -- scalar var used in "anonymous" must be executed in one command
+ -- start of anonymous-procedure* 
+ -- *: not actual anonymous procedure but it acts like one
+ declare @tranName varchar(20);
+ select tranName = 'test_transaction';
+
+ begin transaction @tranName
+ update Custom.student
+ set total_score = total_score + 10
+ where total_score = 0;
+
+ update Custom.student
+ set total_score = total_score - 10
+ where total_score = 10;
+
+ print(concat('rows affected: ', @@ROWCOUNT, ' error code: ', @@ERROR));
+
+ if @@ROWCOUNT <> 0 or @@ERROR <> 0
+	begin
+		print('rolling back');
+		rollback transaction @tranName; -- if no name is given then drop the name part
+	end
+else
+	begin
+		print('commiting');
+		commit transaction @tranName;
+	end
+go
+
+delete from Custom.student
+where name like 'testBatch%';
+
+insert Custom.student
+(name, gender) values ('testBatch1', 'male');
+
+insert Custom.student
+(name, gender) values ('testBatch2', 'female');

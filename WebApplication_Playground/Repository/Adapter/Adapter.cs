@@ -33,5 +33,15 @@ namespace WebApplication_Playground.Repository.Adapter
             return this._studentRepository.getStudentsByGenderAndNameLength(gender, length);
         }
 
+        public int updateStudentWithLowTestScore(int threshold, bool increase, bool rollback)
+        {
+            return this._studentRepository.updateStudentWithLowTestScore(threshold, increase, rollback);
+        }
+
+        public string simulateBatchSave(string failAt)
+        {
+            return this._studentRepository.simulateBatchSave(failAt);
+        }
+
     }
 }
