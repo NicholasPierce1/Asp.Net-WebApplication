@@ -318,5 +318,130 @@ namespace WebApplication_Playground.Repository.Repos
                     $"Success on both operations" : $"failed at: {failAt}";
 
         }
+
+        // reader.NextResultAsync();
+        // get next data set result
+
+        // PROCEDURES INVOCATIONS
+        internal IEnumerable<Student> getAllStudentsProc()
+        {
+
+            using (SqlConnection sqlConnection = this.getSqlConnection())
+            {
+
+                sqlConnection.Open();
+
+                using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                {
+
+                    sqlCommand.CommandText = "Custom.GetAllStudents";
+                    sqlCommand.CommandType = CommandType.StoredProcedure;
+
+                    using (SqlDataReader sqlDataReader = sqlCommand.ExecuteReader())
+                    {
+                        while (sqlDataReader.Read())
+                            yield return this._sqlEntityMapper.createSqlEntity<Student>(sqlDataReader);
+                    }
+
+                }
+
+                sqlConnection.Close();
+
+            }
+
+        }
+
+        internal IEnumerable<Student> getStudentsByGenderProc(Student.Gender gender)
+        {
+
+            using (SqlConnection sqlConnection = this.getSqlConnection())
+            {
+
+                sqlConnection.Open();
+
+                using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                {
+
+                    sqlCommand.CommandText = "Custom.GetStudentsByGender";
+                    sqlCommand.CommandType = CommandType.StoredProcedure; // default
+                    SqlParameter sqlParamter = sqlCommand.Parameters.AddWithValue(
+                        "@gender",
+                        Enum.GetName(
+                            typeof(Student.Gender),
+                            gender
+                        )!
+                    );
+
+                    // can also set data type, direction, and size
+                    // not needed
+                    sqlParamter.Direction = ParameterDirection.Input;
+                    sqlParamter.SqlDbType = SqlDbType.VarChar;
+
+                    using (SqlDataReader sqlDataReader = sqlCommand.ExecuteReader())
+                    {
+                        while (sqlDataReader.Read())
+                            yield return this._sqlEntityMapper.createSqlEntity<Student>(sqlDataReader);
+                    }
+
+                }
+
+                sqlConnection.Close();
+
+            }
+        }
+
+        internal int updateStudentWithLowTestScoreProc(int threshold, bool increase, bool rollback)
+        {
+            int toReturn;
+
+            using (SqlConnection sqlConnection = this.getSqlConnection())
+            {
+                sqlConnection.Open();
+
+                using (SqlTransaction sqlTransaction = sqlConnection.BeginTransaction())
+                {
+                    try
+                    {
+                        using (SqlCommand sqlCommand = sqlConnection.CreateCommand())
+                        {
+                            sqlCommand.Transaction = sqlTransaction;
+                            sqlCommand.CommandText = "Custom.UpdateStudentWithLowTestScore";
+
+                            SqlParameter returnValue = 
+                                new SqlParameter() { SqlDbType = SqlDbType.Int, Direction = ParameterDirection.ReturnValue };
+
+
+                            sqlCommand.Parameters.AddRange(
+                                    new SqlParameter[]{
+                                        new SqlParameter("@threshold", threshold){SqlDbType = SqlDbType.Int, Direction = ParameterDirection.Input},
+                                        new SqlParameter("@toIncrease", increase ? 1 : 0){SqlDbType = SqlDbType.Bit, Direction = ParameterDirection.Input},
+                                        returnValue
+                                    }
+                                );
+                            
+                            toReturn = (int)returnValue.Value;
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        sqlTransaction.Rollback();
+                        return -1; // error
+                    }
+
+                    if (rollback)
+                        sqlTransaction.Rollback();
+                    else
+                        sqlTransaction.Commit();
+                }
+
+                sqlConnection.Close();
+
+                return toReturn;
+            }
+
+        }
+
     }
 }

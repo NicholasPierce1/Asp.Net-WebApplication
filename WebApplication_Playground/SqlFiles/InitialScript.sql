@@ -53,6 +53,8 @@ WHERE
   both can be non-unique (except for PK)
   https://www.sqlshack.com/what-is-the-difference-between-clustered-and-non-clustered-indexes-in-sql-server/
   */
+
+  /*
   CREATE TABLE Custom.student
 (
     id INT IDENTITY(1,1) not null, -- can add primary key here too
@@ -61,7 +63,7 @@ WHERE
     -- DOB datetime NOT NULL,
     total_score INT NOT NULL,
     constraint PK_id primary key clustered (id)
- );
+ );*/
 
  alter table custom.student
  add constraint name_unique unique(name);

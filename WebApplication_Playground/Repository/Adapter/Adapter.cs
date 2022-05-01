@@ -43,5 +43,20 @@ namespace WebApplication_Playground.Repository.Adapter
             return this._studentRepository.simulateBatchSave(failAt);
         }
 
+        public IEnumerable<Student> getAllStudentProc()
+        {
+            return this._studentRepository.getAllStudentsProc();
+        }
+
+        public IEnumerable<Student> getStudentsByGenderProc(Student.Gender gender)
+        {
+            return this._studentRepository.getStudentsByGenderProc(gender);
+        }
+
+        public int updateStudentWithLowTestScoreProc(int threshold, bool increase, bool rollback)
+        {
+            return this._studentRepository.updateStudentWithLowTestScoreProc(threshold, increase, rollback);
+        }
+
     }
 }

@@ -104,5 +104,37 @@ namespace WebApplication_Playground.Controllers
             return base.Ok(this._adapter.simulateBatchSave(failAt));
         }
 
-    }
+        [HttpGet]
+        [Route("getAllStudentProc")]
+        [Produces("application/json")]
+        public IActionResult getAllStudentProc()
+        {
+            return base.Ok(this._adapter.getAllStudentProc());
+        }
+
+        [HttpGet]
+        [Route("getStudentsByGenderProc")]
+        [Produces("application/json")]
+        public IActionResult getStudentsByGenderProc([FromQuery(Name = "gender")] string gender)
+        {
+            return base.Ok(this._adapter.getStudentsByGenderProc(Enum.Parse<Student.Gender>(gender)));
+        }
+
+        [HttpPut]
+        [Route("updateStudentWithLowTestScoreProc")]
+        [Produces("text/plain")]
+        public IActionResult updateStudentWithLowTestScoreProc(
+        [FromQuery(Name = "threshold")] int threshold,
+        [FromQuery(Name = "increase")] string increase,
+        [FromQuery(Name = "rollback")] string rollback
+        )
+            {
+                int updated = this._adapter.updateStudentWithLowTestScore(
+                        threshold,
+                        Convert.ToBoolean(increase),
+                        Convert.ToBoolean(rollback)
+                    );
+                return base.Ok($"{updated}");
+            }
+        }
 }
