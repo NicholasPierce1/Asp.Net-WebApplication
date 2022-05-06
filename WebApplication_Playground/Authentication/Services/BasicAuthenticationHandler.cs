@@ -30,15 +30,28 @@ namespace WebApplication_Playground.Authentication.Services
             _userService = userService;
         }
 
+        // https://stackoverflow.com/questions/25852551/how-to-add-basic-authentication-header-to-webrequest
+        // how to manually add basic authentication header info
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
 
-            Console.WriteLine($"{nameof(BasicAuthenticationHandler)}: Authenticating");
+            Console.WriteLine($"{nameof(BasicAuthenticationHandler)}: Authenticating!");
 
             // skip authentication if endpoint has [AllowAnonymous] attribute
             Endpoint endpoint = base.Context.GetEndpoint();
             if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
                 return AuthenticateResult.NoResult();
+
+            else if(
+                endpoint.Metadata.GetMetadata<AuthorizeAttribute>().AuthenticationSchemes != null // default authorize w/ no schema
+                &&
+                !endpoint.Metadata.GetMetadata<AuthorizeAttribute>()
+                .AuthenticationSchemes.Equals("BasicAuthentication", StringComparison.OrdinalIgnoreCase)  // authorize w/ bearer schema
+                )
+            {
+                Console.WriteLine($"Not a BasicAuthentication schema. Ignoring");
+                return AuthenticateResult.NoResult();
+            }
 
             if (!Request.Headers.ContainsKey("Authorization"))
                 return AuthenticateResult.Fail("Missing Authorization Header");
@@ -60,7 +73,6 @@ namespace WebApplication_Playground.Authentication.Services
 
             if (user == null)
                 return AuthenticateResult.Fail("Invalid Username or Password");
-
             /*Claim[] claims = new Claim[] {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username)
@@ -77,6 +89,7 @@ namespace WebApplication_Playground.Authentication.Services
 
             ClaimsIdentity identity = new ClaimsIdentity(claims, base.Scheme.Name);
             ClaimsPrincipal principal = new ClaimsPrincipal(identity);
+            Console.WriteLine($"{nameof(BasicAuthenticationHandler)}: Is authenticated --> {principal.Identity.IsAuthenticated}");
             AuthenticationTicket ticket = new AuthenticationTicket(principal, base.Scheme.Name);
             
             return AuthenticateResult.Success(ticket);

@@ -12,7 +12,7 @@ namespace WebApplication_Playground
     public class Program
     {
 
-        
+
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
@@ -24,5 +24,14 @@ namespace WebApplication_Playground
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+            // create default builder ALREADY has this below
+            // just use it now
+            /*.ConfigureLogging((hostingContext,logging) =>
+                {
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddConsole();
+                    logging.AddDebug();
+                    logging.AddEventSourceLogger();
+                });*/
     }
 }
