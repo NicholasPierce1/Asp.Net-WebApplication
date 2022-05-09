@@ -158,3 +158,75 @@ insert Custom.student
 
 insert Custom.student
 (name, gender) values ('testBatch2', 'female');
+
+SELECT CONVERT(varchar, '2017-08-25', 101);
+select geography::Point(47.65100, -122.34900, 4326);
+
+create table Custom.GeoPoint(
+	id uniqueidentifier not null default(newid()),
+	long float null,
+	lat  float null,
+	geo as convert(geography, case when lat is not null and long is not null then geography::Point([lat],long,4326) end, 0),
+	constraint geoPkId primary key clustered (id)
+);
+
+-- drop table Custom.GeoPoint;
+delete from Custom.GeoPoint;
+insert into Custom.GeoPoint
+(lat,long)
+values
+(47.65100, -122.34900),
+(null,null);
+
+select * from Custom.GeoPoint;
+
+-- rowguidcol explained
+-- https://www.codeproject.com/Tips/125526/Using-ROWGUIDCOL-in-SQL-Server
+create table custom.Person(
+	id uniqueidentifier not null default(newsequentialid()) rowguidcol,  -- uniqueidentifer w/ newid()
+	name nvarchar(max) not null
+);
+
+-- inserted in different command
+insert into [custom].person
+(name) values ('nick'),('casey');
+
+-- inserted in different command
+insert into Custom.person (name) values ('bob');
+
+-- inserted in different command
+insert into [custom].person
+(name) values ('billy'),('samwise');
+
+-- all id values are different BUT the ones inserted in sequence are similar
+select * from custom.Person;
+
+-- you can query directly off of the rowguidcol (no col ref)
+select rowguidcol, name from custom.Person;
+
+update custom.person
+set
+	name = SUBSTRING(name,0,2);
+
+select * from custom.Person;
+
+delete from custom.Person;
+
+create table custom.dog(
+	id uniqueidentifier not null default(newsequentialid()) rowguidcol,
+	name nvarchar(max) not null,
+	breed nvarchar(max) not null,
+	gender nvarchar(max) not null,
+	constraint genderCheck check (gender in ('male', 'female')),
+	constraint dogPK primary key clustered (id)
+);
+
+insert into custom.dog
+(name, breed, gender)
+values
+('koko', 'choclate lab', 'female'),
+('rylee', 'black lab', 'female'),
+('juno', 'terrier', 'male'),
+('hudson', 'huskie', 'male');
+
+select * from custom.dog;
