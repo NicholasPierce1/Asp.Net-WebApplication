@@ -16,6 +16,7 @@ using WebApplication_Playground.Models.Configuration;
 using Microsoft.Extensions.Options;
 using WebApplication_Playground.DepedencyInjection;
 using Microsoft.AspNetCore.Authorization;
+using System.Text.Json;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -430,6 +431,43 @@ namespace WebApplication_Playground.Controllers
                 // GOOGLE: ('content type for text file') to find MIME type for a specific file type
                 return base.PhysicalFile(fileStream.Name, "text/plain");
             }
+        }
+        
+        [HttpGet]
+        [Route("getTestObject/{id:int}/{name}")]
+        [Produces("application/json")]
+        public IActionResult GetTestObject(int id, string name)
+        {
+            Console.WriteLine($"{nameof(GetTestObject)}: called");
+            return base.Ok(new { id = id, name = name });
+        }
+
+        [HttpGet]
+        [Route("getTestObject2/{name}")]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        public IActionResult GetTestObject2(string name, [FromBody] Dictionary<string,JsonElement> dictionary)
+        {
+            Console.WriteLine($"{nameof(GetTestObject2)}: called");
+            return base.Ok(new { id = dictionary["id"].GetInt32(), name = name });
+        }
+
+        [HttpPost]
+        [Route("createdAtTestObject/{name}")]
+        [Produces("application/json")]
+        public IActionResult CreatedAtTestObject(string name)
+        {
+            // ignores case for route value name match up
+            // header value 'location' w/ created and verified route that is recommended to call next 201 status code to indicate
+            // 500 error if not exist
+            // ignores extra data -> body is suppose to be in body of next request
+
+            // body is ignored
+            //return base.CreatedAtAction(nameof(this.GetTestObject), new { NaME = name, ID = 1, }, new { id = 1, name = name, isBody = true });
+
+            // extra data ignored, extra body element (isBody) in dictionary
+            return base.CreatedAtAction(nameof(this.GetTestObject2), new { NaME = name, ID = 1, }, new { id = 1, name = name, isBody = true });
+
         }
 
         /*
