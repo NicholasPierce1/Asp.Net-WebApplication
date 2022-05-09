@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using WebApplication_Playground.Authentication.Services;
@@ -196,6 +198,18 @@ namespace WebApplication_Playground
                     ServiceLifetime.Singleton
                     )
                 );
+
+            services.Add(
+                    new ServiceDescriptor(
+                        typeof(DogRepository),
+                        (serviceProvider) =>
+                            new DogRepository(
+                                serviceProvider.GetRequiredService<SqlServerConnection>(),
+                                serviceProvider.GetRequiredService<SqlEntityMapper>()
+                            ),
+                        ServiceLifetime.Singleton
+                    )
+                );
             
             services.Add(
                 new ServiceDescriptor(
@@ -210,8 +224,14 @@ namespace WebApplication_Playground
 
             // ServiceFilter - IoC
             services.AddScoped<MyServiceFilter>();
-            
-            //services.AddAuthorization()
+
+            //Mediatr & CQRS
+            // links to explanation and examples:
+            //  - https://medium.com/dotnet-hub/use-mediatr-in-asp-net-or-asp-net-core-cqrs-and-mediator-in-dotnet-how-to-use-mediatr-cqrs-aspnetcore-5076e2f2880c
+            //  - https://code-maze.com/cqrs-mediatr-in-aspnet-core/
+            // No need to create IoC for handlers and requests : )
+            // Mediatr's dependency injection extension handles that for us
+            services.AddMediatR(typeof(Startup).GetTypeInfo().Assembly);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

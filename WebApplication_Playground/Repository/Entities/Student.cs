@@ -27,6 +27,8 @@ namespace WebApplication_Playground.Repository.Entities
 
         public void updateWithReader(SqlDataReader sqlDataReader)
         {
+            // NOTE: check Entity -> Dog.cs
+            // much better way of extrating elements without downcast and/or implicit-conversion
             this.id = (int)sqlDataReader[nameof(this.id)];
             this.name = (string)sqlDataReader[nameof(this.name)];
             this.gender = Enum.Parse<Gender>((string)sqlDataReader[nameof(this.gender)]);

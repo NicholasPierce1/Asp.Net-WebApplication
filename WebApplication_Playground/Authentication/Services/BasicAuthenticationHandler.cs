@@ -42,11 +42,14 @@ namespace WebApplication_Playground.Authentication.Services
             if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
                 return AuthenticateResult.NoResult();
 
+            // endpoint will be null if 404 occurs, but domain registered
+            // check for that
             else if(
-                endpoint.Metadata.GetMetadata<AuthorizeAttribute>().AuthenticationSchemes != null // default authorize w/ no schema
+                endpoint == null ||
+                (endpoint.Metadata.GetMetadata<AuthorizeAttribute>().AuthenticationSchemes != null // default authorize w/ no schema
                 &&
                 !endpoint.Metadata.GetMetadata<AuthorizeAttribute>()
-                .AuthenticationSchemes.Equals("BasicAuthentication", StringComparison.OrdinalIgnoreCase)  // authorize w/ bearer schema
+                .AuthenticationSchemes.Equals("BasicAuthentication", StringComparison.OrdinalIgnoreCase))  // authorize w/ bearer schema
                 )
             {
                 Console.WriteLine($"Not a BasicAuthentication schema. Ignoring");
