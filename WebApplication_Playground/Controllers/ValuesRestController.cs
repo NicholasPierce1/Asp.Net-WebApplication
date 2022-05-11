@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using WebApplication_Playground.DepedencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.Json;
+using System.Net.Mime;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -88,7 +89,7 @@ namespace WebApplication_Playground.Controllers
         [HttpGet]
         [Route("testRequest")]
         [Consumes("application/json")]
-        [Produces("application/json")]
+        [Produces(MediaTypeNames.Application.Json)] // alternative
         public IActionResult testRequest()
         {
             // NOTE: can use form too -> see "createStudentAlternative" for Form aggregation
@@ -376,7 +377,7 @@ namespace WebApplication_Playground.Controllers
 
         [HttpGet]
         [Route("getCustomInjection")]
-        [Produces("text/plain")]
+        [Produces(MediaTypeNames.Text.Plain)] // alternative for non-application types
         public IActionResult GetCustomInjection()
         {
             // for consumers (non-controllers) just register them as injections as well to be 
