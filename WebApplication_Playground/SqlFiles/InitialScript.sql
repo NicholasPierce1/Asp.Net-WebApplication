@@ -162,13 +162,14 @@ insert Custom.student
 SELECT CONVERT(varchar, '2017-08-25', 101);
 select geography::Point(47.65100, -122.34900, 4326);
 
+/*
 create table Custom.GeoPoint(
 	id uniqueidentifier not null default(newid()),
 	long float null,
 	lat  float null,
 	geo as convert(geography, case when lat is not null and long is not null then geography::Point([lat],long,4326) end, 0),
 	constraint geoPkId primary key clustered (id)
-);
+);*/
 
 -- drop table Custom.GeoPoint;
 delete from Custom.GeoPoint;
@@ -182,11 +183,12 @@ select * from Custom.GeoPoint;
 
 -- rowguidcol explained
 -- https://www.codeproject.com/Tips/125526/Using-ROWGUIDCOL-in-SQL-Server
+/*
 create table custom.Person(
 	id uniqueidentifier not null default(newsequentialid()) rowguidcol,  -- uniqueidentifer w/ newid()
 	name nvarchar(max) not null
 );
-
+*/
 -- inserted in different command
 insert into [custom].person
 (name) values ('nick'),('casey');
@@ -211,7 +213,7 @@ set
 select * from custom.Person;
 
 delete from custom.Person;
-
+/*
 create table custom.dog(
 	id uniqueidentifier not null default(newsequentialid()) rowguidcol,
 	name nvarchar(max) not null,
@@ -219,7 +221,8 @@ create table custom.dog(
 	gender nvarchar(max) not null,
 	constraint genderCheck check (gender in ('male', 'female')),
 	constraint dogPK primary key clustered (id)
-);
+);*/
+go
 
 insert into custom.dog
 (name, breed, gender)
@@ -230,3 +233,61 @@ values
 ('hudson', 'huskie', 'male');
 
 select * from custom.dog;
+
+create table custom.EmployeeRecursive(
+	id uniqueidentifier default(newsequentialid()) rowguidcol,
+	name nvarchar(max) not null,
+	level nvarchar(max) not null check(level in ('owner', 'branch manager', 'entry-level')),
+	reportsTo uniqueidentifier null,
+	constraint empId primary key clustered (id),
+	constraint bossFK foreign key (id) references custom.EmployeeRecursive(id)
+		on delete no action -- no action = restrict. others -> cascade, set null, set default
+		-- on update cascade -- same
+);
+
+alter table custom.EmployeeRecursive
+add constraint fkNotSelf check (reportsTo <> id);
+
+insert into custom.EmployeeRecursive
+(name, level, reportsTo)
+values
+('elon', 'owner', null),
+('billy', 'branch manager', null),
+('bob', 'branch manager', null),
+('joe', 'entry-level', null),
+('samwise', 'entry-level', null);
+
+update custom.EmployeeRecursive
+set
+	reportsTo = (select id from custom.EmployeeRecursive where name = 'bob')
+where
+	name = 'samwise';
+
+select * from custom.EmployeeRecursive;
+
+go
+
+-- data types of columns (including length) MUST match
+-- cast strings, or other literals when 'anchor' type error occurs
+create or alter function custom.EmployeeRecursiveTest()
+returns table
+as
+	return with cte as (
+		select *, cast(' ' as nvarchar(max)) as path from custom.EmployeeRecursive where reportsTo is null
+		union all
+		select e.*, cast(concat(e.name, '->', cte.name) as nvarchar(max)) as path from custom.EmployeeRecursive e, cte where e.reportsTo = cte.id
+		
+	) select * from cte;
+
+go
+create or alter function custom.AddOne(@num int = 0)
+returns int
+as
+begin
+	return @num + 1;
+end;
+
+go
+
+print(custom.AddOne(3));
+select * from custom.EmployeeRecursiveTest();
